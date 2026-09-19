@@ -5,7 +5,11 @@ services:
       POSTGRES_USER: tradesentinel
       POSTGRES_PASSWORD: tradesentinel
       POSTGRES_DB: tradesentinel
-    
+    services:
+  web:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
   
     # ports:
     #   - "5432:5432"
