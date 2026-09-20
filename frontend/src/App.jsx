@@ -1,16 +1,29 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Heartbeat from './components/Heartbeat.jsx'
 import TickLog from './components/TickLog.jsx'
 import BacktestPanel from './components/BacktestPanel.jsx'
 import { useLiveFeed } from './hooks/useLiveFeed.js'
 
 const API_URL =
-  import.meta.env.VITE_API_BASE_URL || 'https://tredesentinel7.onrender.com'
+  import.meta.env.VITE_API_BASE_URL ||
+  'https://tredesentinel7.onrender.com'
 
 const NAV_ITEMS = [
-  { id: 'dashboard', label: 'Dashboard', icon: '▦' },
-  { id: 'backtest', label: 'Backtest', icon: '◈' },
-  { id: 'live', label: 'Live Monitor', icon: '◉' },
+  {
+    id: 'dashboard',
+    label: 'Dashboard',
+    icon: '▦',
+  },
+  {
+    id: 'backtest',
+    label: 'Backtest',
+    icon: '◈',
+  },
+  {
+    id: 'live',
+    label: 'Live Monitor',
+    icon: '◉',
+  },
 ]
 
 export default function App() {
@@ -19,11 +32,18 @@ export default function App() {
   )
 
   const [tab, setTab] = useState('dashboard')
-  const [loginError, setLoginError] = useState('')
+
+  // login / register
+  const [authMode, setAuthMode] = useState('login')
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+
+  const [authError, setAuthError] = useState('')
+  const [authSuccess, setAuthSuccess] = useState('')
+
   const [loggingIn, setLoggingIn] = useState(false)
+  const [registering, setRegistering] = useState(false)
 
   const {
     connected,
@@ -31,10 +51,17 @@ export default function App() {
     halted,
   } = useLiveFeed()
 
+  /*
+   * =========================
+   * LOGIN
+   * =========================
+   */
+
   async function login(event) {
     event.preventDefault()
 
-    setLoginError('')
+    setAuthError('')
+    setAuthSuccess('')
     setLoggingIn(true)
 
     try {
@@ -48,7 +75,8 @@ export default function App() {
         {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Type':
+              'application/x-www-form-urlencoded',
           },
           body,
         }
@@ -58,7 +86,8 @@ export default function App() {
 
       if (!response.ok) {
         throw new Error(
-          data.detail || 'Incorrect email or password'
+          data.detail ||
+            'Incorrect email or password'
         )
       }
 
@@ -76,18 +105,94 @@ export default function App() {
 
       setAuthenticated(true)
       setPassword('')
+      setAuthError('')
+      setAuthSuccess('')
       setTab('dashboard')
     } catch (error) {
-      setLoginError(
-        error.message || 'Login failed'
+      setAuthError(
+        error.message ||
+          'Unable to sign in'
       )
     } finally {
       setLoggingIn(false)
     }
   }
 
+  /*
+   * =========================
+   * REGISTER
+   * =========================
+   */
+
+  async function register(event) {
+    event.preventDefault()
+
+    setAuthError('')
+    setAuthSuccess('')
+    setRegistering(true)
+
+    try {
+      const response = await fetch(
+        `${API_URL}/api/v1/auth/register`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type':
+              'application/json',
+          },
+          body: JSON.stringify({
+            email,
+            password,
+          }),
+        }
+      )
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        let message =
+          'Registration failed'
+
+        if (typeof data.detail === 'string') {
+          message = data.detail
+        }
+
+        throw new Error(message)
+      }
+
+      /*
+       * Registration succeeded.
+       * Switch back to Login.
+       */
+
+      setAuthMode('login')
+      setAuthSuccess(
+        'Account created successfully. You can now sign in.'
+      )
+
+      setPassword('')
+      setAuthError('')
+    } catch (error) {
+      setAuthError(
+        error.message ||
+          'Registration failed'
+      )
+    } finally {
+      setRegistering(false)
+    }
+  }
+
+  /*
+   * =========================
+   * LOGOUT
+   * =========================
+   */
+
   async function logout() {
-    const token = localStorage.getItem('access_token')
+    const token =
+      localStorage.getItem(
+        'access_token'
+      )
 
     try {
       if (token) {
@@ -96,7 +201,8 @@ export default function App() {
           {
             method: 'POST',
             headers: {
-              Authorization: `Bearer ${token}`,
+              Authorization:
+                `Bearer ${token}`,
             },
           }
         )
@@ -105,36 +211,77 @@ export default function App() {
       // Ignore logout network errors
     }
 
-    localStorage.removeItem('access_token')
-    localStorage.removeItem('refresh_token')
+    localStorage.removeItem(
+      'access_token'
+    )
+
+    localStorage.removeItem(
+      'refresh_token'
+    )
 
     setAuthenticated(false)
+    setAuthMode('login')
+    setEmail('')
+    setPassword('')
+    setAuthError('')
+    setAuthSuccess('')
     setTab('dashboard')
   }
+
+  /*
+   * =========================
+   * AUTH SCREEN
+   * =========================
+   */
 
   if (!authenticated) {
     return (
       <LoginScreen
+        mode={authMode}
         email={email}
         password={password}
         setEmail={setEmail}
         setPassword={setPassword}
-        onSubmit={login}
-        error={loginError}
-        loading={loggingIn}
+        onSubmit={
+          authMode === 'login'
+            ? login
+            : register
+        }
+        error={authError}
+        success={authSuccess}
+        loading={
+          authMode === 'login'
+            ? loggingIn
+            : registering
+        }
+        onSwitchMode={() => {
+          setAuthMode(
+            authMode === 'login'
+              ? 'register'
+              : 'login'
+          )
+
+          setAuthError('')
+          setAuthSuccess('')
+        }}
       />
     )
   }
 
-  const latestTick = ticks[ticks.length - 1]
+  const latestTick =
+    ticks[ticks.length - 1]
 
   return (
     <div className="app-shell">
 
-      {/* SIDEBAR */}
+      {/* =========================
+          SIDEBAR
+      ========================= */}
+
       <aside className="sidebar">
 
         <div className="brand">
+
           <div className="brand-mark">
             TS
           </div>
@@ -148,6 +295,7 @@ export default function App() {
               Trading Intelligence
             </div>
           </div>
+
         </div>
 
         <div className="sidebar-section">
@@ -159,11 +307,16 @@ export default function App() {
           {NAV_ITEMS.map((item) => (
             <button
               key={item.id}
-              onClick={() => setTab(item.id)}
+              onClick={() =>
+                setTab(item.id)
+              }
               className={`nav-item ${
-                tab === item.id ? 'active' : ''
+                tab === item.id
+                  ? 'active'
+                  : ''
               }`}
             >
+
               <span className="nav-icon">
                 {item.icon}
               </span>
@@ -176,6 +329,7 @@ export default function App() {
                 connected && (
                   <span className="nav-live-dot" />
                 )}
+
             </button>
           ))}
 
@@ -186,6 +340,7 @@ export default function App() {
           <div className="system-card">
 
             <div className="system-header">
+
               <span>
                 System status
               </span>
@@ -197,6 +352,7 @@ export default function App() {
                     : 'offline'
                 }`}
               />
+
             </div>
 
             <div className="system-status">
@@ -223,23 +379,30 @@ export default function App() {
 
       </aside>
 
-      {/* MAIN */}
+      {/* =========================
+          MAIN AREA
+      ========================= */}
+
       <div className="main-area">
 
         {/* TOPBAR */}
+
         <header className="topbar">
 
           <div>
+
             <div className="breadcrumb">
               TradeSentinel /{' '}
               {
                 NAV_ITEMS.find(
-                  (x) => x.id === tab
+                  (x) =>
+                    x.id === tab
                 )?.label
               }
             </div>
 
             <h1>
+
               {tab === 'dashboard' &&
                 'Trading Dashboard'}
 
@@ -248,30 +411,43 @@ export default function App() {
 
               {tab === 'live' &&
                 'Live Monitor'}
+
             </h1>
+
           </div>
 
           <div className="topbar-right">
 
             <div className="market-indicator">
+
               <span
-                className="status-dot online"
+                className={`status-dot ${
+                  connected
+                    ? 'online'
+                    : 'offline'
+                }`}
               />
 
               <span>
-                API Connected
+                {connected
+                  ? 'API Connected'
+                  : 'API Offline'}
               </span>
+
             </div>
 
             <div className="portfolio-badge">
+
               <span>
                 Portfolio
               </span>
 
               <strong>
+
                 $
                 {(
-                  latestTick?.portfolio_value ??
+                  latestTick
+                    ?.portfolio_value ??
                   10000
                 ).toLocaleString(
                   undefined,
@@ -280,7 +456,9 @@ export default function App() {
                     maximumFractionDigits: 2,
                   }
                 )}
+
               </strong>
+
             </div>
 
             <div className="avatar">
@@ -297,7 +475,10 @@ export default function App() {
           </div>
         )}
 
-        {/* CONTENT */}
+        {/* =========================
+            CONTENT
+        ========================= */}
+
         <main className="content">
 
           {tab === 'dashboard' && (
@@ -319,6 +500,7 @@ export default function App() {
               <div className="panel-header">
 
                 <div>
+
                   <div className="panel-title">
                     Live Trading Activity
                   </div>
@@ -326,6 +508,7 @@ export default function App() {
                   <div className="panel-subtitle">
                     Real-time strategy signals
                   </div>
+
                 </div>
 
                 <div className="chart-badge">
@@ -336,7 +519,9 @@ export default function App() {
 
               </div>
 
-              <TickLog ticks={ticks} />
+              <TickLog
+                ticks={ticks}
+              />
 
             </div>
           )}
@@ -350,25 +535,35 @@ export default function App() {
 }
 
 
-/* =========================
-   LOGIN
-========================= */
+/*
+ * =====================================================
+ * LOGIN / REGISTER SCREEN
+ * =====================================================
+ */
 
 function LoginScreen({
+  mode,
   email,
   password,
   setEmail,
   setPassword,
   onSubmit,
   error,
+  success,
   loading,
+  onSwitchMode,
 }) {
+  const isLogin =
+    mode === 'login'
+
   return (
     <div className="login-page">
 
       <div className="login-background" />
 
       <div className="login-card">
+
+        {/* LOGO */}
 
         <div className="login-logo">
           TS
@@ -382,11 +577,57 @@ function LoginScreen({
           Trading Intelligence Platform
         </p>
 
+        {/* TITLE */}
+
+        <div className="auth-heading">
+
+          {isLogin
+            ? 'Welcome back'
+            : 'Create your account'}
+
+        </div>
+
+        <div className="auth-description">
+
+          {isLogin
+            ? 'Sign in to access your trading dashboard.'
+            : 'Create an account to start using TradeSentinel.'}
+
+        </div>
+
+        {/* ERROR */}
+
         {error && (
-          <div className="login-error">
-            ⚠ {error}
+          <div className="login-message">
+
+            <span>
+              ⚠
+            </span>
+
+            <span>
+              {error}
+            </span>
+
           </div>
         )}
+
+        {/* SUCCESS */}
+
+        {success && (
+          <div className="login-message success">
+
+            <span>
+              ✓
+            </span>
+
+            <span>
+              {success}
+            </span>
+
+          </div>
+        )}
+
+        {/* FORM */}
 
         <form onSubmit={onSubmit}>
 
@@ -398,10 +639,13 @@ function LoginScreen({
             type="email"
             placeholder="you@example.com"
             value={email}
-            onChange={(e) =>
-              setEmail(e.target.value)
+            onChange={(event) =>
+              setEmail(
+                event.target.value
+              )
             }
             required
+            autoComplete="email"
           />
 
           <label>
@@ -412,10 +656,18 @@ function LoginScreen({
             type="password"
             placeholder="Your password"
             value={password}
-            onChange={(e) =>
-              setPassword(e.target.value)
+            onChange={(event) =>
+              setPassword(
+                event.target.value
+              )
             }
             required
+            minLength={6}
+            autoComplete={
+              isLogin
+                ? 'current-password'
+                : 'new-password'
+            }
           />
 
           <button
@@ -423,12 +675,44 @@ function LoginScreen({
             disabled={loading}
             className="login-button"
           >
+
             {loading
-              ? 'Signing in...'
-              : 'Sign in'}
+              ? isLogin
+                ? 'Signing in...'
+                : 'Creating account...'
+              : isLogin
+                ? 'Sign in'
+                : 'Create account'}
+
           </button>
 
         </form>
+
+        {/* SWITCH */}
+
+        <div className="auth-switch">
+
+          <span>
+
+            {isLogin
+              ? "Don't have an account?"
+              : 'Already have an account?'}
+
+          </span>
+
+          <button
+            type="button"
+            onClick={onSwitchMode}
+            className="auth-switch-button"
+          >
+
+            {isLogin
+              ? 'Create account'
+              : 'Sign in'}
+
+          </button>
+
+        </div>
 
         <div className="login-footer">
           PAPER TRADING ENVIRONMENT
@@ -441,9 +725,11 @@ function LoginScreen({
 }
 
 
-/* =========================
-   DASHBOARD
-========================= */
+/*
+ * =====================================================
+ * DASHBOARD
+ * =====================================================
+ */
 
 function Dashboard({
   ticks,
@@ -452,14 +738,18 @@ function Dashboard({
   onNavigate,
 }) {
   const portfolioValue =
-    latestTick?.portfolio_value ?? 10000
+    latestTick
+      ?.portfolio_value ??
+    10000
 
-  const tickCount = ticks.length
+  const tickCount =
+    ticks.length
 
   return (
     <div className="dashboard">
 
       {/* HERO */}
+
       <section className="dashboard-hero">
 
         <div>
@@ -469,6 +759,7 @@ function Dashboard({
           </div>
 
           <div className="hero-value">
+
             $
             {portfolioValue.toLocaleString(
               undefined,
@@ -477,11 +768,17 @@ function Dashboard({
                 maximumFractionDigits: 2,
               }
             )}
+
           </div>
 
           <div className="hero-change positive">
-            <span>↑</span>
+
+            <span>
+              ↑
+            </span>
+
             Paper trading environment
+
           </div>
 
         </div>
@@ -510,8 +807,8 @@ function Dashboard({
 
       </section>
 
-
       {/* METRICS */}
+
       <section className="metrics-grid">
 
         <MetricCard
@@ -525,7 +822,9 @@ function Dashboard({
           label="Live Signals"
           value={tickCount}
           change={
-            connected ? 'LIVE' : 'OFFLINE'
+            connected
+              ? 'LIVE'
+              : 'OFFLINE'
           }
           positive={connected}
         />
@@ -553,15 +852,18 @@ function Dashboard({
 
       </section>
 
+      {/* DASHBOARD GRID */}
 
-      {/* MAIN GRID */}
       <section className="dashboard-grid">
+
+        {/* CHART */}
 
         <div className="panel chart-panel">
 
           <div className="panel-header">
 
             <div>
+
               <div className="panel-title">
                 Portfolio Activity
               </div>
@@ -569,12 +871,15 @@ function Dashboard({
               <div className="panel-subtitle">
                 Real-time portfolio monitoring
               </div>
+
             </div>
 
             <div className="chart-badge">
+
               {connected
                 ? 'LIVE'
                 : 'PAUSED'}
+
             </div>
 
           </div>
@@ -582,11 +887,14 @@ function Dashboard({
           <div className="dashboard-chart">
 
             {ticks.length > 1 ? (
+
               <Heartbeat
                 ticks={ticks}
                 connected={connected}
               />
+
             ) : (
+
               <div className="empty-chart">
 
                 <div className="empty-icon">
@@ -598,23 +906,26 @@ function Dashboard({
                 </div>
 
                 <span>
-                  Live portfolio signals will
-                  appear here.
+                  Live portfolio signals
+                  will appear here.
                 </span>
 
               </div>
+
             )}
 
           </div>
 
         </div>
 
+        {/* RECENT SIGNALS */}
 
         <div className="panel activity-panel">
 
           <div className="panel-header">
 
             <div>
+
               <div className="panel-title">
                 Recent Signals
               </div>
@@ -622,6 +933,7 @@ function Dashboard({
               <div className="panel-subtitle">
                 Latest strategy decisions
               </div>
+
             </div>
 
             <button
@@ -646,52 +958,65 @@ function Dashboard({
             {[...ticks]
               .reverse()
               .slice(0, 5)
-              .map((tick, index) => (
-
-                <div
-                  key={index}
-                  className="activity-item"
-                >
+              .map(
+                (
+                  tick,
+                  index
+                ) => (
 
                   <div
-                    className={`signal-icon ${
-                      tick.signal || 'neutral'
-                    }`}
+                    key={index}
+                    className="activity-item"
                   >
-                    {tick.signal === 'buy'
-                      ? '↑'
-                      : tick.signal === 'sell'
-                        ? '↓'
-                        : '•'}
-                  </div>
 
-                  <div className="activity-main">
+                    <div
+                      className={`signal-icon ${
+                        tick.signal ||
+                        'neutral'
+                      }`}
+                    >
 
-                    <div className="activity-symbol">
-                      {tick.symbol || 'Market'}
+                      {tick.signal ===
+                      'buy'
+                        ? '↑'
+                        : tick.signal ===
+                            'sell'
+                          ? '↓'
+                          : '•'}
+
                     </div>
 
-                    <div className="activity-reason">
-                      {tick.reason ||
-                        'Strategy signal'}
+                    <div className="activity-main">
+
+                      <div className="activity-symbol">
+                        {tick.symbol ||
+                          'Market'}
+                      </div>
+
+                      <div className="activity-reason">
+                        {tick.reason ||
+                          'Strategy signal'}
+                      </div>
+
+                    </div>
+
+                    <div className="activity-price">
+
+                      {tick.price
+                        ? tick.price.toLocaleString(
+                            undefined,
+                            {
+                              maximumFractionDigits: 2,
+                            }
+                          )
+                        : '—'}
+
                     </div>
 
                   </div>
 
-                  <div className="activity-price">
-                    {tick.price
-                      ? tick.price.toLocaleString(
-                          undefined,
-                          {
-                            maximumFractionDigits: 2,
-                          }
-                        )
-                      : '—'}
-                  </div>
-
-                </div>
-
-              ))}
+                )
+              )}
 
           </div>
 
@@ -699,8 +1024,8 @@ function Dashboard({
 
       </section>
 
-
       {/* QUICK ACTIONS */}
+
       <section className="bottom-grid">
 
         <QuickAction
@@ -738,9 +1063,11 @@ function Dashboard({
 }
 
 
-/* =========================
-   METRIC CARD
-========================= */
+/*
+ * =====================================================
+ * METRIC CARD
+ * =====================================================
+ */
 
 function MetricCard({
   label,
@@ -761,7 +1088,9 @@ function MetricCard({
 
       <div
         className={`metric-change ${
-          positive ? 'positive' : ''
+          positive
+            ? 'positive'
+            : ''
         }`}
       >
         {change}
@@ -772,9 +1101,11 @@ function MetricCard({
 }
 
 
-/* =========================
-   QUICK ACTION
-========================= */
+/*
+ * =====================================================
+ * QUICK ACTION
+ * =====================================================
+ */
 
 function QuickAction({
   icon,
@@ -807,4 +1138,4 @@ function QuickAction({
 
     </div>
   )
-              }
+             }
