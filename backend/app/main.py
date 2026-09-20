@@ -58,7 +58,7 @@ async def request_logging_middleware(request: Request, call_next):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # tighten in production
+    allow_origins=["https://tredesentinel8.onrender.com"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
