@@ -2,9 +2,6 @@ import { useState } from 'react'
 import Heartbeat from './components/Heartbeat.jsx'
 import TickLog from './components/TickLog.jsx'
 import BacktestPanel from './components/BacktestPanel.jsx'
-import BotsPanel from './components/BotsPanel.jsx'
-import PortfolioBadge from './components/PortfolioBadge.jsx'
-import LoginPanel from './components/LoginPanel.jsx'
 import { useLiveFeed } from './hooks/useLiveFeed.js'
 import { useAuth } from './hooks/useAuth.jsx'
 
@@ -12,7 +9,6 @@ const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: '▦' },
   { id: 'backtest', label: 'Backtest', icon: '◈' },
   { id: 'live', label: 'Live Monitor', icon: '◉' },
-  { id: 'bots', label: 'Trading Bots', icon: '⚡' },
 ]
 
 export default function App() {
