@@ -13,8 +13,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "change-me-in-production"
     API_V1_PREFIX: str = "/api/v1"
 
-    # Database
-    DATABASE_URL=postgresql+asyncpg://tradesentinel:tradesentinel@localhost:5432/tradesentinel
+    DATABASE_URL: str = "postgresql+asyncpg://tradesentinel:tradesentinel@localhost:5432/tradesentinel"
 
     # Redis (price cache + pub/sub for websocket fan-out)
     REDIS_URL: str = "redis://redis:6379/0"
